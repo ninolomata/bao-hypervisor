@@ -1,0 +1,1 @@
+boards-objs-y+=openpiton_desc.o

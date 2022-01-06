@@ -454,7 +454,7 @@ void sbi_lgcy_rfence_handler(unsigned long extid)
 
 void sbi_lgcy_putchar_handler() 
 {
-    char c = (char)vcpu_readreg(cpu.vcpu, REG_A0);
+    char c = (char)vcpu_readreg(cpu()->vcpu, REG_A0);
     sbi_console_putchar(c);
 }
 
@@ -488,12 +488,12 @@ void sbi_lgcy_handler(unsigned long extid)
 
 size_t sbi_vs_handler()
 {
-    unsigned long extid = vcpu_readreg(cpu.vcpu, REG_A7);
+    unsigned long extid = vcpu_readreg(cpu()->vcpu, REG_A7);
 
     if (extid < 16) {
         sbi_lgcy_handler(extid);
     } else {
-        unsigned long fid = vcpu_readreg(cpu.vcpu, REG_A6);
+        unsigned long fid = vcpu_readreg(cpu()->vcpu, REG_A6);
         struct sbiret ret;
 
         switch (extid) {
@@ -521,8 +521,8 @@ size_t sbi_vs_handler()
                 ret.value = SBI_ERR_NOT_SUPPORTED;
         }
 
-        vcpu_writereg(cpu.vcpu, REG_A0, ret.error);
-        vcpu_writereg(cpu.vcpu, REG_A1, ret.value);
+        vcpu_writereg(cpu()->vcpu, REG_A0, ret.error);
+        vcpu_writereg(cpu()->vcpu, REG_A1, ret.value);
     }
 
     return 4;
