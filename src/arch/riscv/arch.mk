@@ -1,4 +1,4 @@
-CROSS_COMPILE := riscv64-unknown-elf-
+CROSS_COMPILE ?= riscv64-unknown-elf-
 
 arch-cppflags = 
 arch-cflags = -mcmodel=medany -march=rv64g
