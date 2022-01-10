@@ -254,7 +254,7 @@ void vplic_inject(vcpu_t *vcpu, int id)
 
 static void vplic_emul_prio_access(emul_access_t *acc)
 {
-    int int_id = (acc->addr & 0xfff) / 4;
+    int int_id = ((acc->addr - platform.arch.plic_base) & 0xfff) / 4;
     if (acc->write) {
         vplic_set_prio(cpu.vcpu,int_id, vcpu_readreg(cpu.vcpu, acc->reg));
     } else {
@@ -267,7 +267,7 @@ static void vplic_emul_pend_access(emul_access_t *acc)
     // pend registers are read only
     if (acc->write) return;
 
-    int first_int = ((acc->addr & 0xfff) / 4) * 32;
+    int first_int = (((acc->addr - platform.arch.plic_base) & 0xfff) / 4) * 32;
 
     uint32_t val = 0;
     for (int i = 0; i < 32; i++) {
@@ -282,9 +282,10 @@ static void vplic_emul_pend_access(emul_access_t *acc)
 static void vplic_emul_enbl_access(emul_access_t *acc)
 {
     int vcntxt_id =
-        (((acc->addr - 0x2000) & 0x1fffff) / 4) / PLIC_NUM_ENBL_REGS;
+        ((((acc->addr - platform.arch.plic_base) - 0x2000) & 0x1fffff) 
+        / 4) / PLIC_NUM_ENBL_REGS;
 
-    int first_int = ((acc->addr & 0x7f) / 4) * 32;
+    int first_int = (((acc->addr - platform.arch.plic_base) & 0x7f) / 4) * 32;
     unsigned long val = acc->write ? vcpu_readreg(cpu.vcpu, acc->reg) : 0;
     if(vplic_vcntxt_valid(cpu.vcpu, vcntxt_id)) {
         for (int i = 0; i < 32; i++) {
@@ -327,7 +328,7 @@ static bool vplic_hart_emul_handler(emul_access_t *acc)
     // only allow aligned word accesses
     if (acc->width > 4 || acc->addr & 0x3) return false;
 
-    int vcntxt = ((acc->addr - PLIC_CLAIMCMPLT_OFF) >> 12) & 0x3ff;
+    int vcntxt = (((acc->addr - platform.arch.plic_base) - PLIC_CLAIMCMPLT_OFF) >> 12) & 0x3ff;
     if(!vplic_vcntxt_valid(cpu.vcpu, vcntxt)) {
         if(!acc->write) {
             vcpu_writereg(cpu.vcpu, acc->reg, 0);
