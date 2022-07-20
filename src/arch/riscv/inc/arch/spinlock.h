@@ -17,6 +17,9 @@
 #define __ARCH_SPINLOCK__
 
 #include <bao.h>
+#include <arch/riscv_barrier.h>
+#include <arch/riscv_locks.h>
+/* #include <bao.h>
 
 typedef volatile uint32_t __attribute__((aligned(4))) spinlock_t;
 
@@ -41,6 +44,6 @@ static inline void spin_unlock(spinlock_t* lock)
     asm volatile("sw zero, %0\n\t"
                  "fence rw, rw\n\t"  // Is the full blown barrier really needed?
                  ::"m"(*lock));
-}
+} */
 
 #endif /* __ARCH_SPINLOCK__ */

@@ -1333,7 +1333,7 @@ void as_init(addr_space_t *as, enum AS_TYPE type, uint64_t id, void *root_pt,
     as->pt.dscr =
         type == AS_HYP || type == AS_HYP_CPY ? hyp_pt_dscr : vm_pt_dscr;
     as->colors = colors;
-    as->lock = SPINLOCK_INITVAL;
+    SPIN_LOCK_INIT(as->lock);
     as->id = id;
 
     if (root_pt == NULL) {
