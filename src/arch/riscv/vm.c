@@ -48,7 +48,12 @@ void vcpu_arch_reset(vcpu_t *vcpu, uint64_t entry)
     vcpu->regs->a0 = vcpu->arch.hart_id = vcpu->id;
     vcpu->regs->a1 = 0;  // according to sbi it should be the dtb load address
 
-    CSRW(CSR_HCOUNTEREN, HCOUNTEREN_TM);
+    CSRW(CSR_HCOUNTEREN, 0xffffffff);
+#if CVA6_SSTC_EXTENSION_ENBL == 1
+    CSRW(CSR_HENVCFG, 0xffffffffffffffff);
+    CSRW(CSR_STIMECMP, 0xffffffffffffffff);
+    CSRW(CSR_VSTIMECMP, 0xffffffffffffffff);
+#endif
     CSRW(CSR_HTIMEDELTA, 0);
     CSRW(CSR_VSSTATUS, SSTATUS_SD | SSTATUS_FS_DIRTY | SSTATUS_XS_DIRTY);
     CSRW(CSR_HIE, 0);

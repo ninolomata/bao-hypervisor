@@ -27,6 +27,7 @@
 #define CSR_VSTVAL 0x243
 #define CSR_VSIP 0x244
 #define CSR_VSATP 0x280
+#define CSR_VSTIMECMP 0x24D
 
 #define CSR_HSTATUS 0x600
 #define CSR_HEDELEG 0x602
@@ -42,6 +43,9 @@
 #define CSR_HTINST 0x64A
 #define CSR_HGATP 0x680
 #define CSR_HGEIP 0xE07
+#define CSR_HENVCFG 0x60A
+
+#define CSR_STIMECMP 0x14D
 
 #define STVEC_MODE_OFF (0)
 #define STVEC_MODE_LEN (2)

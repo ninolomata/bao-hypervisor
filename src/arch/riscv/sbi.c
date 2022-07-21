@@ -261,8 +261,12 @@ struct sbiret sbi_time_handler(unsigned long fid)
 
     uint64_t stime_value = vcpu_readreg(cpu.vcpu, REG_A0);
 
+#if CVA6_SSTC_EXTENSION_ENBL == 1
+    CSRW(CSR_VSTIMECMP,stime_value);
+#else
     sbi_set_timer(stime_value);  // assumes always success
     CSRC(CSR_HVIP, HIP_VSTIP);
+#endif
     CSRS(sie, SIE_STIE);
 
     return (struct sbiret){SBI_SUCCESS};
