@@ -93,10 +93,10 @@ void sbi_console_putchar(int ch)
     (void)sbi_ecall(0x1, 0, ch, 0, 0, 0, 0, 0);
 }
 
-/* int sbi_console_getchar()
+struct sbiret sbi_console_getchar()
 {
-    //return sbi_ecall(0x2, 0, 0, 0, 0, 0, 0, 0);
-} */
+    return sbi_ecall(0x2, 0, 0, 0, 0, 0, 0, 0);
+}
 
 struct sbiret sbi_get_spec_version(void)
 {
@@ -475,6 +475,13 @@ void sbi_lgcy_putchar_handler()
     char c = (char)vcpu_readreg(cpu.vcpu, REG_A0);
     sbi_console_putchar(c);
 }
+void sbi_lgcy_getchar_handler()
+{
+    struct sbiret ret = sbi_console_getchar();
+    vcpu_writereg(cpu.vcpu, REG_A0, ret.error);
+    vcpu_writereg(cpu.vcpu, REG_A1, ret.value);
+}
+
 
 void sbi_lgcy_handler(unsigned long extid)
 {
@@ -494,7 +501,7 @@ void sbi_lgcy_handler(unsigned long extid)
             sbi_lgcy_putchar_handler();
             break;
         case SBI_LGCY_EXTID_GETCHAR:
-           // sbi_lgcy_getchar_handler();
+            sbi_lgcy_getchar_handler();
             break;
         default:
             WARNING("guest issued unsupported sbi legacy extension call (%d)",
