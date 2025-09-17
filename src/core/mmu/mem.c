@@ -16,8 +16,12 @@
 #include <tlb.h>
 #include <config.h>
 
-extern uint8_t _image_start, _image_load_end, _image_end, _dmem_phys_beg, _dmem_beg,
-    _cpu_private_beg, _cpu_private_end, _vm_beg, _vm_end, _vm_image_start, _vm_image_end;
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+
+extern uint8_t _image_load_end, _dmem_phys_beg, _dmem_beg,
+    _cpu_private_beg, _cpu_private_end, _vm_beg, _vm_end, _image_end, _image_start;
+extern size_t _vm_image_end_sym, _vm_image_start_sym, _image_end_sym, _image_start_sym, _image_load_end_sym;
 
 void switch_space(struct cpu*, paddr_t);
 
@@ -27,19 +31,19 @@ void switch_space(struct cpu*, paddr_t);
  */
 
 struct section {
-    vaddr_t beg;
-    vaddr_t end;
+    addr_t beg;
+    addr_t end;
     bool shared;
     spinlock_t lock;
 };
 
 struct section hyp_secs[] = {
-    [SEC_HYP_GLOBAL] = { (vaddr_t)&_dmem_beg, (vaddr_t)&_cpu_private_beg - 1, true,
+    [SEC_HYP_GLOBAL] = { (addr_t)&_dmem_beg, (addr_t)&_cpu_private_beg - 1, true,
         SPINLOCK_INITVAL },
-    [SEC_HYP_IMAGE] = { (vaddr_t)&_image_start, (vaddr_t)&_image_end - 1, true, SPINLOCK_INITVAL },
-    [SEC_HYP_PRIVATE] = { (vaddr_t)&_cpu_private_beg, (vaddr_t)&_cpu_private_end - 1, false,
+    [SEC_HYP_IMAGE] = { (addr_t)&_image_start, (addr_t)&_image_end - 1, true, SPINLOCK_INITVAL },
+    [SEC_HYP_PRIVATE] = { (addr_t)&_cpu_private_beg, (addr_t)&_cpu_private_end - 1, false,
         SPINLOCK_INITVAL },
-    [SEC_HYP_VM] = { (vaddr_t)&_vm_beg, (vaddr_t)&_vm_end - 1, true, SPINLOCK_INITVAL },
+    [SEC_HYP_VM] = { (addr_t)&_vm_beg, (addr_t)&_vm_end - 1, true, SPINLOCK_INITVAL },
 };
 
 struct section vm_secs[] = { [SEC_VM_ANY] = { 0x0, MAX_VA, false, SPINLOCK_INITVAL } };
@@ -203,11 +207,16 @@ static inline pte_t* mem_alloc_pt(struct addr_space* as, pte_t* parent, size_t l
     return temp_pt;
 }
 
-static inline bool pt_pte_mappable(struct addr_space* as, pte_t* pte, size_t lvl, size_t left,
+bool pt_pte_mappable(struct addr_space* as, pte_t* pte, size_t lvl, size_t left,
     vaddr_t vaddr, paddr_t paddr)
 {
+#ifdef __CHERI_PURE_CAPABILITY__
+size_t vaddr_tmp = __builtin_cheri_address_get(vaddr);
+#else
+size_t vaddr_tmp = vaddr;
+#endif
     return !pte_valid(pte) && (pt_lvlsize(&as->pt, lvl) <= (left * PAGE_SIZE)) &&
-        (((size_t)vaddr % pt_lvlsize(&as->pt, lvl)) == 0) &&
+        (((size_t)vaddr_tmp % pt_lvlsize(&as->pt, lvl)) == 0) &&
         ((paddr % pt_lvlsize(&as->pt, lvl)) == 0);
 }
 
@@ -681,7 +690,6 @@ vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas,
     size_t num_pages)
 {
     vaddr_t _vad = mem_alloc_vpage(asd, SEC_HYP_GLOBAL, vad, num_pages);
-    size_t base_vad = _vad;
     size_t count = 0;
     size_t to_map = num_pages * PAGE_SIZE;
 
@@ -706,8 +714,7 @@ vaddr_t mem_map_cpy(struct addr_space* ass, struct addr_space* asd, vaddr_t vas,
         count += npages;
         to_map -= size;
     }
-
-    return base_vad;
+    return _vad;
 }
 
 static void* copy_space(void* base, const size_t size, struct ppages* pages)
@@ -741,10 +748,10 @@ void mem_color_hypervisor(const paddr_t load_addr, struct mem_region* root_regio
     struct ppages p_image;
     struct ppages p_bitmap;
 
-    size_t image_load_size = (size_t)(&_image_load_end - &_image_start);
-    size_t image_noload_size = (size_t)(&_image_end - &_image_load_end);
+    size_t image_load_size = (size_t)(_image_load_end_sym - _image_start_sym);
+    size_t image_noload_size = (size_t)(_image_end_sym - _image_load_end_sym);
     size_t image_size = image_load_size + image_noload_size;
-    size_t vm_image_size = (size_t)(&_vm_image_end - &_vm_image_start);
+    size_t vm_image_size = (size_t)(_vm_image_end_sym - _vm_image_start_sym);
     size_t cpu_boot_size = mem_cpu_boot_alloc_size();
     struct page_pool* root_pool = &root_region->page_pool;
     size_t bitmap_size =
@@ -921,10 +928,44 @@ void as_init(struct addr_space* as, enum AS_TYPE type, asid_t id, pte_t* root_pt
 
 void mem_prot_init(void)
 {
+#ifdef __CHERI_PURE_CAPABILITY__
+    paddr_t root_pt_addr  = ALIGN((__builtin_cheri_address_get((void*)cpu()) + sizeof(struct cpu)), PAGE_SIZE);
+    pte_t* root_pt = (pte_t*) cheri_build_data_cap(root_pt_addr, PAGE_SIZE, CHERI_HYP_DATA_PERMS);
+#else
     pte_t* root_pt = (pte_t*)ALIGN(((vaddr_t)cpu()) + sizeof(struct cpu), PAGE_SIZE);
+#endif
     as_init(&cpu()->as, AS_HYP, HYP_ASID, root_pt, config.hyp.colors);
 }
 
+#ifdef __CHERI_PURE_CAPABILITY__
+vaddr_t mem_alloc_map(struct addr_space* as, enum AS_SEC section, struct ppages* page, vaddr_t at,
+    size_t num_pages, mem_flags_t flags)
+{
+    ptraddr_t address = (ptraddr_t) mem_alloc_vpage(as, section, at, num_pages);
+    if (address != INVALID_VA) {
+        vaddr_t cap_alloc = (vaddr_t) cheri_build_data_cap(address, num_pages*PAGE_SIZE, CHERI_HYP_DATA_PERMS);
+        mem_map(as, cap_alloc, page, num_pages, flags);
+        return cap_alloc;
+    } 
+    return (vaddr_t) NULL;
+}
+
+vaddr_t mem_alloc_map_dev(struct addr_space* as, enum AS_SEC section, vaddr_t at, paddr_t pa,
+    size_t num_pages)
+{
+    ptraddr_t address = mem_alloc_vpage(as, section, at, num_pages);
+    if (address != INVALID_VA) {
+        struct ppages pages = mem_ppages_get(pa, num_pages);
+        mem_flags_t flags = as->type == AS_HYP ? PTE_HYP_DEV_FLAGS : PTE_VM_DEV_FLAGS;
+        vaddr_t cap_alloc = (vaddr_t) cheri_build_data_cap(address, num_pages*PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+        mem_map(as, cap_alloc, &pages, num_pages, flags);
+        return cap_alloc;
+    }
+
+    return (vaddr_t) NULL;
+}
+
+#else
 vaddr_t mem_alloc_map(struct addr_space* as, enum AS_SEC section, struct ppages* page, vaddr_t at,
     size_t num_pages, mem_flags_t flags)
 {
@@ -947,3 +988,4 @@ vaddr_t mem_alloc_map_dev(struct addr_space* as, enum AS_SEC section, vaddr_t at
 
     return address;
 }
+#endif

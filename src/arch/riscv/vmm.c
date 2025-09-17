@@ -17,16 +17,17 @@ void vmm_arch_init()
     /**
      * Delegate all interrupts and exceptions not meant to be dealt by the hypervisor
      */
-
-    csrs_hideleg_write(HIDELEG_VSSI | HIDELEG_VSTI | HIDELEG_VSEI);
-    csrs_hedeleg_write(HEDELEG_ECU | HEDELEG_IPF | HEDELEG_LPF | HEDELEG_SPF);
-
+    #ifdef __CHERI__
+        csrs_hedeleg_write(HEDELEG_ECU | HEDELEG_IPF | HEDELEG_LPF | HEDELEG_SPF | HEDELEG_CF);
+    #else
+        csrs_hedeleg_write(HEDELEG_ECU | HEDELEG_IPF | HEDELEG_LPF | HEDELEG_SPF);
+    #endif
     /**
      * Enable and sanity check presence of Sstc extension if the hypervisor was
      * configured to use it (via the CPU_EXT_SSTC macro). Otherwise, make sure
      * it is disabled.
      */
-    if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
+    /* if (CPU_HAS_EXTENSION(CPU_EXT_SSTC)) {
         csrs_henvcfg_set(HENVCFG_STCE);
         bool sstc_present = (csrs_henvcfg_read() & HENVCFG_STCE) != 0;
         if (cpu_is_master() && !sstc_present) {
@@ -37,7 +38,9 @@ void vmm_arch_init()
         csrs_stimecmp_write(~0U);
     } else {
         csrs_henvcfg_clear(HENVCFG_STCE);
-    }
+    } */
+
+    // TODO: Envcfg bits for CHERI extension.
 
     /**
      * TODO: consider delegating other exceptions e.g. breakpoint or ins misaligned

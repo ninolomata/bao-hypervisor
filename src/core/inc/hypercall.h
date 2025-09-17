@@ -20,12 +20,12 @@ long int hypercall(unsigned long id);
 
 static inline unsigned long hypercall_get_arg(struct vcpu* vcpu, size_t arg_index)
 {
-    return vcpu_readreg(vcpu, HYPCALL_IN_ARG_REG(arg_index));
+    return vcpu_readreg_raw(vcpu, HYPCALL_IN_ARG_REG(arg_index));
 }
 
 static inline void hypercall_set_ret(struct vcpu* vcpu, size_t arg_index, unsigned long arg_val)
 {
-    vcpu_writereg(vcpu, HYPCALL_OUT_ARG_REG(arg_index), arg_val);
+    vcpu_writereg_raw(vcpu, HYPCALL_OUT_ARG_REG(arg_index), arg_val);
 }
 
 #endif /* HYPERCALL_H */

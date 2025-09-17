@@ -260,9 +260,9 @@ static void vplic_emul_prio_access(struct emul_access* acc)
 {
     irqid_t int_id = (irqid_t)((acc->addr & 0xfff) / 4);
     if (acc->write) {
-        vplic_set_prio(cpu()->vcpu, int_id, (uint32_t)vcpu_readreg(cpu()->vcpu, acc->reg));
+        vplic_set_prio(cpu()->vcpu, int_id, (uint32_t)vcpu_readreg_raw(cpu()->vcpu, acc->reg));
     } else {
-        vcpu_writereg(cpu()->vcpu, acc->reg, vplic_get_prio(cpu()->vcpu, int_id));
+        vcpu_writereg_raw(cpu()->vcpu, acc->reg, vplic_get_prio(cpu()->vcpu, int_id));
     }
 }
 
@@ -282,7 +282,7 @@ static void vplic_emul_pend_access(struct emul_access* acc)
         }
     }
 
-    vcpu_writereg(cpu()->vcpu, acc->reg, val);
+    vcpu_writereg_raw(cpu()->vcpu, acc->reg, val);
 }
 
 static void vplic_emul_enbl_access(struct emul_access* acc)
@@ -290,7 +290,7 @@ static void vplic_emul_enbl_access(struct emul_access* acc)
     size_t vcntxt_id = (((acc->addr - 0x2000) & 0x1fffff) / 4) / PLIC_NUM_ENBL_REGS;
 
     irqid_t first_int = (irqid_t)(((acc->addr & 0x7f) / 4) * 32);
-    unsigned long val = acc->write ? vcpu_readreg(cpu()->vcpu, acc->reg) : 0;
+    unsigned long val = acc->write ? vcpu_readreg_raw(cpu()->vcpu, acc->reg) : 0;
     if (vplic_vcntxt_valid(cpu()->vcpu, vcntxt_id)) {
         for (irqid_t i = 0; i < 32; i++) {
             if (acc->write) {
@@ -302,7 +302,7 @@ static void vplic_emul_enbl_access(struct emul_access* acc)
     }
 
     if (!acc->write) {
-        vcpu_writereg(cpu()->vcpu, acc->reg, val);
+        vcpu_writereg_raw(cpu()->vcpu, acc->reg, val);
     }
 }
 
@@ -347,21 +347,21 @@ static bool vplic_hart_emul_handler(struct emul_access* acc)
         case offsetof(struct plic_hart_hw, threshold):
             if (acc->write) {
                 vplic_set_threshold(cpu()->vcpu, vcntxt,
-                    (irqid_t)vcpu_readreg(cpu()->vcpu, acc->reg));
+                    (irqid_t)vcpu_readreg_raw(cpu()->vcpu, acc->reg));
             } else {
-                vcpu_writereg(cpu()->vcpu, acc->reg, vplic_get_threshold(cpu()->vcpu, vcntxt));
+                vcpu_writereg_raw(cpu()->vcpu, acc->reg, vplic_get_threshold(cpu()->vcpu, vcntxt));
             }
             break;
         case offsetof(struct plic_hart_hw, claim):
             if (acc->write) {
-                vplic_complete(cpu()->vcpu, vcntxt, (irqid_t)vcpu_readreg(cpu()->vcpu, acc->reg));
+                vplic_complete(cpu()->vcpu, vcntxt, (irqid_t)vcpu_readreg_raw(cpu()->vcpu, acc->reg));
             } else {
-                vcpu_writereg(cpu()->vcpu, acc->reg, vplic_claim(cpu()->vcpu, vcntxt));
+                vcpu_writereg_raw(cpu()->vcpu, acc->reg, vplic_claim(cpu()->vcpu, vcntxt));
             }
             break;
         default:
             if (!acc->write) {
-                vcpu_writereg(cpu()->vcpu, acc->reg, 0);
+                vcpu_writereg_raw(cpu()->vcpu, acc->reg, 0);
             }
             break;
     }

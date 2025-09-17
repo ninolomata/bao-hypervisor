@@ -23,35 +23,66 @@ switch_space:
     add a6, a6, t0
 
     /* Calculate stack size */
+    #ifdef __CHERI_PURE_CAPABILITY__
+    cgetaddr a7, csp
+    #else
     mv a7, sp
+    #endif
     sub a5, a6, a7
 
     /* Get current CPU space current sp */
-    mv a6, sp
+    #ifdef __CHERI_PURE_CAPABILITY__
+        cmove ca6, csp
+    #else
+        mv a6, sp
+    #endif
 
     /* Get new CPU space current sp */
     li t0, CPU_STACK_OFF + CPU_STACK_SIZE
-    add a0, a0, t0
-    sub a0, a0, a5
+    #ifdef __CHERI_PURE_CAPABILITY__
+        sub t1, t0, a5
+        cincoffset ca0, ca0, t1
+    #else
+        add a0, a0, t0
+        sub a0, a0, a5
+    #endif
 
     /* Copy stack */
     li a4, 0
 1:
     /* Copy two words */
-    LOAD a2, (a6)
-    STORE a2, (a0)
+    #ifdef __CHERI_PURE_CAPABILITY__
+    LOAD_REG ca2, (ca6)
+    STORE_REG ca2, (ca0)
+    #else
+    LOAD_REG a2, 0(a6)
+    STORE_REG a2, 0(a0)
+    #endif
     
     /* Increment addressess and count accordingly */
+    #ifdef __CHERI_PURE_CAPABILITY__
+    cincoffset ca6, ca6, REGLEN
+    cincoffset ca0, ca0, REGLEN
+    cincoffset ca4, ca4, REGLEN
+    #else
     add a6, a6, REGLEN
     add a0, a0, REGLEN
     add a4, a4, REGLEN
+    #endif
     
     /* If count is less then size, repeat */
     blt a4, a5, 1b
     
     /* Restore original addresses */
-    sub a6, a6, a4
-    sub a0, a0, a4
+    #ifdef __CHERI_PURE_CAPABILITY__
+        sub t1, a6, a4
+        sub t2, a0, a4
+        cincoffset ca6, ca6, t1
+        cincoffset ca0, ca0, t2
+    #else
+        sub a6, a6, a4
+        sub a0, a0, a4
+    #endif
 
     /* Update root page table pointer */
     srl a1, a1, PAGE_SHIFT
@@ -64,5 +95,8 @@ switch_space:
      * need any shootdown as all harts must go through here.
      */
     sfence.vma
-
+    #ifdef __CHERI_PURE_CAPABILITY__
+    cret
+    #else
     ret
+    #endif

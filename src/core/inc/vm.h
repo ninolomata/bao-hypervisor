@@ -177,10 +177,17 @@ void vm_mem_prot_init(struct vm* vm, const struct vm_config* config);
 void vm_arch_init(struct vm* vm, const struct vm_config* config);
 void vcpu_arch_init(struct vcpu* vcpu, struct vm* vm);
 void vcpu_run(struct vcpu* vcpu);
-unsigned long vcpu_readreg(struct vcpu* vcpu, unsigned long reg);
-void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, unsigned long val);
+void* vcpu_readreg(struct vcpu* vcpu, unsigned long reg);
+void vcpu_writereg(struct vcpu* vcpu, unsigned long reg, void* val);
+unsigned long vcpu_readreg_raw(struct vcpu* vcpu, unsigned long reg);
+void vcpu_writereg_raw(struct vcpu* vcpu, unsigned long reg, unsigned long val);
+#ifdef __CHERI_PURE_CAPABILITY__
+void* vcpu_readpc(struct vcpu* vcpu);
+void vcpu_writepc(struct vcpu* vcpu, void* pc);
+#else
 unsigned long vcpu_readpc(struct vcpu* vcpu);
 void vcpu_writepc(struct vcpu* vcpu, unsigned long pc);
+#endif
 void vcpu_arch_reset(struct vcpu* vcpu, vaddr_t entry);
 bool vcpu_arch_is_on(struct vcpu* vcpu);
 

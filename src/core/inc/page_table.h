@@ -49,7 +49,11 @@ static inline size_t pt_getpteindex(struct page_table* pt, pte_t* pte, size_t lv
 
 static inline size_t pt_getpteindex_by_va(struct page_table* pt, vaddr_t va, size_t lvl)
 {
+#ifdef __CHERI_PURE_CAPABILITY__
+    return (__builtin_cheri_address_get(va) >> pt->dscr->lvl_off[lvl]) & (pt_nentries(pt, lvl) - 1);
+#else
     return (va >> pt->dscr->lvl_off[lvl]) & (pt_nentries(pt, lvl) - 1);
+#endif
 }
 
 static inline bool pt_lvl_terminal(struct page_table* pt, size_t lvl)

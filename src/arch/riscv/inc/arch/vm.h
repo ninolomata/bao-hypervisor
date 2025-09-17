@@ -75,57 +75,53 @@ struct vcpu_arch {
 
 struct arch_regs {
     union {
-        unsigned long x[31];
+        regaddr_t x[31];
         struct {
-            unsigned long ra;
-            unsigned long sp;
-            unsigned long gp;
-            unsigned long tp;
-            unsigned long t0;
-            unsigned long t1;
-            unsigned long t2;
-            unsigned long s0;
-            unsigned long s1;
-            unsigned long a0;
-            unsigned long a1;
-            unsigned long a2;
-            unsigned long a3;
-            unsigned long a4;
-            unsigned long a5;
-            unsigned long a6;
-            unsigned long a7;
-            unsigned long s2;
-            unsigned long s3;
-            unsigned long s4;
-            unsigned long s5;
-            unsigned long s6;
-            unsigned long s7;
-            unsigned long s8;
-            unsigned long s9;
-            unsigned long s10;
-            unsigned long s11;
-            unsigned long t3;
-            unsigned long t4;
-            unsigned long t5;
-            unsigned long t6;
+            regaddr_t ra;
+            regaddr_t sp;
+            regaddr_t gp;
+            regaddr_t tp;
+            regaddr_t t0;
+            regaddr_t t1;
+            regaddr_t t2;
+            regaddr_t s0;
+            regaddr_t s1;
+            regaddr_t a0;
+            regaddr_t a1;
+            regaddr_t a2;
+            regaddr_t a3;
+            regaddr_t a4;
+            regaddr_t a5;
+            regaddr_t a6;
+            regaddr_t a7;
+            regaddr_t s2;
+            regaddr_t s3;
+            regaddr_t s4;
+            regaddr_t s5;
+            regaddr_t s6;
+            regaddr_t s7;
+            regaddr_t s8;
+            regaddr_t s9;
+            regaddr_t s10;
+            regaddr_t s11;
+            regaddr_t t3;
+            regaddr_t t4;
+            regaddr_t t5;
+            regaddr_t t6;
         };
     };
 
     unsigned long hstatus;
+#if __CHERI__
+    unsigned long hstatus_pad;
+#endif
     unsigned long sstatus;
-    unsigned long sepc;
-
-    // unsigned long vsstatus;
-    // unsigned long vsie;
-    // unsigned long vstvec;
-    // unsigned long vsscratch;
-    // unsigned long vsepc;
-    // unsigned long vscause;
-    // unsigned long vstval;
-    // unsigned long vsip;
-    // unsigned long vsatp;
-
-} __attribute__((__packed__, aligned(sizeof(unsigned long))));
+#if __CHERI__
+    unsigned long sstatus_pad;
+    void* ddc;
+#endif
+    regaddr_t sepc;
+} __attribute__((__packed__, aligned(sizeof(regaddr_t))));
 
 void vcpu_arch_entry(void);
 

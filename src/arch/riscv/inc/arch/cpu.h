@@ -7,6 +7,10 @@
 #define __ARCH_CPU_H__
 
 #include <bao.h>
+#ifdef __CHERI__
+#include <arch/cheri.h>
+#include <arch/cheri_utils.h>
+#endif
 
 #define CPU_HAS_EXTENSION(EXT) (DEFINED(EXT))
 
@@ -19,7 +23,8 @@ struct cpu_arch {
 
 static inline struct cpu* cpu(void)
 {
-    return (struct cpu*)BAO_CPU_BASE;
+ void * tp_cap = cheri_build_data_cap(BAO_CPU_BASE, BAO_VM_BASE-BAO_CPU_BASE ,CHERI_HYP_DATA_PERMS);
+  return tp_cap;
 }
 
 #endif /* __ARCH_CPU_H__ */

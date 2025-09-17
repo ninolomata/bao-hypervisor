@@ -8,6 +8,11 @@
 #include <platform.h>
 #include <cpu.h>
 
+#ifdef __CHERI__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
+
 static inline void as_map_physical_identity(struct addr_space* as)
 {
     const size_t lvl = 0;
@@ -49,16 +54,31 @@ void as_arch_init(struct addr_space* as)
 bool mem_translate(struct addr_space* as, vaddr_t va, paddr_t* pa)
 {
     size_t pte_index = pt_getpteindex_by_va(&as->pt, va, 0);
+    #ifdef __CHERI_PURE_CAPABILITY__
+    ptraddr_t pte_pa = (paddr_t ) as->pt.root;
+    pte_t* pte = cheri_build_data_cap(pte_pa, PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+    pte = (pte_t*)__builtin_cheri_address_set((void *)pte, (ptraddr_t)&(as->pt.root[pte_index]));
+    #else
     pte_t* pte = &(as->pt.root[pte_index]);
+    #endif
     size_t lvl = 0;
     for (size_t i = 0; i < as->pt.dscr->lvls; i++) {
         if (!pte_valid(pte) || !pte_table(&as->pt, pte, i)) {
             lvl = i;
             break;
         }
-        pte = (pte_t*)pte_addr(pte);
+        #ifdef __CHERI_PURE_CAPABILITY__
+            pte_pa = pte_addr(pte);
+        #else
+            pte = (pte_t*)pte_addr(pte);
+        #endif
         size_t index = pt_getpteindex_by_va(&as->pt, va, i + 1);
-        pte = &pte[index];
+        #ifdef __CHERI_PURE_CAPABILITY__
+            pte = cheri_build_data_cap(pte_pa, PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+            pte = (pte_t*)__builtin_cheri_address_set((void *)pte, (ptraddr_t)&pte[index]);
+        #else
+            pte = &pte[index];
+        #endif
     }
     if (pte && pte_valid(pte)) {
         *pa = pte_addr(pte);

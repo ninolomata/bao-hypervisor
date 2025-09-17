@@ -1,11 +1,15 @@
 ## SPDX-License-Identifier: Apache-2.0
 ## Copyright (c) Bao Project and Contributors. All rights reserved.
 
-ARCH_SUB?=riscv64
-
-ifeq ($(ARCH_SUB), riscv64)
+ARCH_SUB?=riscv64xcheri
+ifeq ($(ARCH_SUB), riscv64xcheri)
+CROSS_COMPILE ?= riscv64-unknown-elf
+riscv_march:=rv64imafdxcheri
+riscv_mabi:=l64pc128d
+ld_emulation:=elf64lriscv
+else ifeq ($(ARCH_SUB), riscv64)
 CROSS_COMPILE ?= riscv64-unknown-elf-
-riscv_march:=rv64imac_zicsr
+riscv_march:=rv64imac
 riscv_mabi:=lp64
 ld_emulation:=elf64lriscv
 else ifeq ($(ARCH_SUB), riscv32)
@@ -33,7 +37,7 @@ endif
 irqc_arch_dir=$(cpu_arch_dir)/irqc/$(IRQC_DIR)
 src_dirs+=$(irqc_arch_dir)
 
-ifeq ($(ARCH_SUB), riscv64)
+ifneq ($(filter riscv64 riscv64xcheri, $(strip $(ARCH_SUB))),)
 arch-cppflags+=-DRV_XLEN=64
 else ifeq ($(ARCH_SUB), riscv32)
 arch-cppflags+=-DRV_XLEN=32
@@ -42,7 +46,7 @@ arch-cppflags+=-DIRQC=$(IRQC)
 arch-cflags = -mcmodel=medany -march=$(riscv_march) -mstrict-align \
 	-mabi=$(riscv_mabi)
 arch-asflags =
-arch-ldflags = -m $(ld_emulation)
+arch-ldflags = -m  $(ld_emulation)
 
 arch_mem_prot:=mmu
 PAGE_SIZE:=0x1000

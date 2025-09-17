@@ -104,7 +104,7 @@
 #define SSTATUS_XS_DIRTY            (3ULL << SSTATUS_XS_OFF)
 #define SSTATUS_SUM                 (1ULL << 18)
 #define SSTATUS_MXR                 (1ULL << 19)
-#define SSTATUS_SD                  (1ULL << ((REGLEN * 8) - 1))
+#define SSTATUS_SD                  (1ULL << (RV_XLEN - 1))
 
 #define SIE_USIE                    (1ULL << 0)
 #define SIE_SSIE                    (1ULL << 1)
@@ -161,7 +161,10 @@
 #define SCAUSE_CODE_IGPF            (20)
 #define SCAUSE_CODE_LGPF            (21)
 #define SCAUSE_CODE_VRTI            (22)
-#define SCAUSE_CODE_SGPF            (23)
+#define SCAUSE_CODE_SGPF            (23)  
+#define SCAUSE_CODE_CLPF            (26)
+#define SCAUSE_CODE_CSPF            (27) 
+#define SCAUSE_CODE_CF              (28)
 
 #define HIDELEG_USI                 SIP_USIP
 #define HIDELEG_SSI                 SIP_SSIP
@@ -188,6 +191,7 @@
 #define HEDELEG_IPF                 (1ULL << 12)
 #define HEDELEG_LPF                 (1ULL << 13)
 #define HEDELEG_SPF                 (1ULL << 15)
+#define HEDELEG_CF                  (1ULL << 28)
 
 #define MISA_H                      (1ULL << 7)
 

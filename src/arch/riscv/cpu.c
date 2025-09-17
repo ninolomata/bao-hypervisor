@@ -33,15 +33,25 @@ void cpu_arch_standby(void)
     if (ret.error < 0) {
         ERROR("failed to suspend hart %d", cpu()->id);
     }
+    #ifdef __CHERI_PURE_CAPABILITY__
+    __asm__ volatile("cmove csp, %0\n\r"
+                     "j cpu_standby_wakeup\n\r" ::"C"(&cpu()->stack[STACK_SIZE]));
+    #else
     __asm__ volatile("mv sp, %0\n\r"
                      "j cpu_standby_wakeup\n\r" ::"r"(&cpu()->stack[STACK_SIZE]));
+    #endif
     ERROR("returned from standby wake up");
 }
 
 void cpu_arch_powerdown(void)
 {
     __asm__ volatile("wfi\n\t" ::: "memory");
+    #ifdef __CHERI_PURE_CAPABILITY__
+    __asm__ volatile("cmove csp, %0\n\r"
+                     "j cpu_powerdown_wakeup\n\r" ::"C"(&cpu()->stack[STACK_SIZE]));
+    #else
     __asm__ volatile("mv sp, %0\n\r"
                      "j cpu_powerdown_wakeup\n\r" ::"r"(&cpu()->stack[STACK_SIZE]));
+    #endif
     ERROR("returned from powerdown wake up");
 }

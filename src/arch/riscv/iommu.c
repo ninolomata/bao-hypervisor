@@ -9,6 +9,10 @@
 #include <string.h>
 #include <arch/spinlock.h>
 #include <bitmap.h>
+#ifdef __CHERI_PURE_CAPABILITY__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
 
 // We initially use a 1-LVL DDT with DC in extended format
 // N entries = 4kiB / 64 B p/ entry = 64 Entries
@@ -275,8 +279,14 @@ static void rv_iommu_init(void)
     // Allocate memory for FQ (aligned to 4kiB)
     vaddr_t fq_vaddr = (vaddr_t)mem_alloc_page(NUM_PAGES(sizeof(struct fq_entry) * FQ_N_ENTRIES),
         SEC_HYP_GLOBAL, true);
-    memset((void*)fq_vaddr, 0, sizeof(struct fq_entry) * FQ_N_ENTRIES);
-    rv_iommu.hw.fq = (struct fq_entry*)fq_vaddr;
+    #ifdef __CHERI_PURE_CAPABILITY__
+        struct fq_entry* fq_cap = cheri_build_data_cap(fq_vaddr, sizeof(struct fq_entry) * FQ_N_ENTRIES * PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+        memset((void*)fq_cap, 0, sizeof(struct fq_entry) * FQ_N_ENTRIES);
+        rv_iommu.hw.fq = fq_cap;
+    #else
+        memset((void*)fq_vaddr, 0, sizeof(struct fq_entry) * FQ_N_ENTRIES);
+        rv_iommu.hw.fq = (struct fq_entry*)fq_vaddr;
+    #endif
 
     // Configure fqb with queue size and base address. Clear fqh
     paddr_t fq_paddr;
@@ -303,9 +313,16 @@ static void rv_iommu_init(void)
     // Allocate a page of memory (aligned) for the DDT
     vaddr_t ddt_vaddr = (vaddr_t)mem_alloc_page(NUM_PAGES(sizeof(struct ddt_entry) * DDT_N_ENTRIES),
         SEC_HYP_GLOBAL, true);
-    // Clear entries
-    memset((void*)ddt_vaddr, 0, sizeof(struct ddt_entry) * DDT_N_ENTRIES);
-    rv_iommu.hw.ddt = (struct ddt_entry*)ddt_vaddr;
+    #ifdef __CHERI_PURE_CAPABILITY__
+        struct ddt_entry* ddt_cap = cheri_build_data_cap(ddt_vaddr, sizeof(struct ddt_entry) * DDT_N_ENTRIES * PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+        // Clear entries
+        memset((void*)ddt_cap, 0, sizeof(struct ddt_entry) * DDT_N_ENTRIES);
+        rv_iommu.hw.ddt = ddt_cap;
+    #else
+        // Clear entries
+        memset((void*)ddt_vaddr, 0, sizeof(struct ddt_entry) * DDT_N_ENTRIES);
+        rv_iommu.hw.ddt = (struct ddt_entry*)ddt_vaddr;
+    #endif
 
     // Configure ddtp with DDT base address and IOMMU mode
     paddr_t ddt_paddr;

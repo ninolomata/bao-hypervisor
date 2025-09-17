@@ -37,16 +37,26 @@ SECTIONS
         PROVIDE(__global_pointer$ = . + 0x800);
 		*(.sdata .sdata.* .sdata2.*)
 	}
+	. = ALIGN(PAGE_SIZE);
+	__cap_relocs : {
+     . = ALIGN(16);
+		 *(__cap_relocs)
+  }
+	. = ALIGN(PAGE_SIZE);
+  .captable : {
+     . = ALIGN(16);
+		 *(.captable)
+  }
 
 	.ipi_cpumsg_handlers : {
-		ipi_cpumsg_handlers = .;
+		_ipi_cpumsg_handlers = .;
 		*(.ipi_cpumsg_handlers)
 	}
 
 	.ipi_cpumsg_handlers_id : {
 		_ipi_cpumsg_handlers_id_start = .;
 		*(.ipi_cpumsg_handlers_id)
-        _ipi_cpumsg_handlers_id_end = .;
+    _ipi_cpumsg_handlers_id_end = .;
 	}
 
     . = ALIGN(PAGE_SIZE);

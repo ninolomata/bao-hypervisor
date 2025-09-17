@@ -10,6 +10,11 @@
 #include <vm.h>
 #include <fences.h>
 
+#ifdef __CHERI__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
+
 struct cpu_msg_node {
     node_t node;
     struct cpu_msg msg;
@@ -24,9 +29,10 @@ OBJPOOL_ALLOC(msg_pool, struct cpu_msg_node, CPU_MSG_POOL_SIZE);
 
 struct cpu_synctoken cpu_glb_sync = { .ready = false };
 
-extern cpu_msg_handler_t ipi_cpumsg_handlers[];
-extern size_t _ipi_cpumsg_handlers_id_start[];
-extern size_t _ipi_cpumsg_handlers_id_end[];
+extern size_t _ipi_cpumsg_handlers_sym[];
+cpu_msg_handler_t * ipi_cpumsg_handlers;
+extern size_t _ipi_cpumsg_handlers_id_start_sym;
+extern size_t _ipi_cpumsg_handlers_id_end_sym;
 static size_t ipi_cpumsg_handler_num;
 
 struct cpuif cpu_interfaces[PLAT_CPU_NUM];
@@ -45,10 +51,20 @@ void cpu_init(cpuid_t cpu_id, paddr_t load_addr)
         cpu_sync_init(&cpu_glb_sync, platform.cpu_num);
 
         ipi_cpumsg_handler_num =
-            (size_t)(_ipi_cpumsg_handlers_id_end - _ipi_cpumsg_handlers_id_start);
+            (size_t)(_ipi_cpumsg_handlers_id_end_sym - _ipi_cpumsg_handlers_id_start_sym);
         for (size_t i = 0; i < ipi_cpumsg_handler_num; i++) {
-            ((size_t*)_ipi_cpumsg_handlers_id_start)[i] = i;
+            #ifdef __CHERI_PURE_CAPABILITY__
+                size_t * ipi_cpumsg_handlers_id_cap = (size_t*) cheri_build_data_cap((ptraddr_t)_ipi_cpumsg_handlers_id_start_sym, sizeof(size_t)*ipi_cpumsg_handler_num, CHERI_HYP_DATA_PERMS);
+                ((size_t*)ipi_cpumsg_handlers_id_cap)[i] = i;
+            #else
+                ((size_t*)_ipi_cpumsg_handlers_id_start_sym)[i] = i;
+            #endif
         }
+        #ifdef __CHERI_PURE_CAPABILITY__
+            ipi_cpumsg_handlers = (cpu_msg_handler_t*) cheri_build_data_cap((ptraddr_t)_ipi_cpumsg_handlers_sym, sizeof(cpu_msg_handler_t)*ipi_cpumsg_handler_num, CHERI_HYP_CODE_PERMS);
+        #else
+            ipi_cpumsg_handlers = (cpu_msg_handler_t*)_ipi_cpumsg_handlers_sym;
+        #endif
     }
 
     cpu_sync_barrier(&cpu_glb_sync);

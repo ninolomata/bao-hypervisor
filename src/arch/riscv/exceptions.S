@@ -7,109 +7,150 @@
 #include <asm_defs.h>
 #include <arch/csrs.h>
 
+.extern hyp_root_data_cap
+
 .text 
 
 .macro VM_EXIT
+#ifdef __CHERI_PURE_CAPABILITY__
+    cspecialrw c31, sscratchc, c31
+#else
+    csrrw   x31, sscratch, x31
+#endif
 
-    csrrw   x31, sscratch, x31
     
-    STORE   x1, 0*REGLEN(x31)
-    STORE   x2, 1*REGLEN(x31)
-    STORE   x3, 2*REGLEN(x31)
-    STORE   x4, 3*REGLEN(x31)
-    STORE   x5, 4*REGLEN(x31)
-    STORE   x6, 5*REGLEN(x31)
-    STORE   x7, 6*REGLEN(x31)
-    STORE   x8, 7*REGLEN(x31)
-    STORE   x9, 8*REGLEN(x31)
-    STORE   x10, 9*REGLEN(x31)
-    STORE   x11, 10*REGLEN(x31)
-    STORE   x12, 11*REGLEN(x31)
-    STORE   x13, 12*REGLEN(x31)
-    STORE   x14, 13*REGLEN(x31)
-    STORE   x15, 14*REGLEN(x31)
-    STORE   x16, 15*REGLEN(x31)
-    STORE   x17, 16*REGLEN(x31)
-    STORE   x18, 17*REGLEN(x31)
-    STORE   x19, 18*REGLEN(x31)
-    STORE   x20, 19*REGLEN(x31)
-    STORE   x21, 20*REGLEN(x31)
-    STORE   x22, 21*REGLEN(x31)
-    STORE   x23, 22*REGLEN(x31)
-    STORE   x24, 23*REGLEN(x31)
-    STORE   x25, 24*REGLEN(x31)
-    STORE   x26, 25*REGLEN(x31)
-    STORE   x27, 26*REGLEN(x31)
-    STORE   x28, 27*REGLEN(x31)
-    STORE   x29, 28*REGLEN(x31)
-    STORE   x30, 29*REGLEN(x31)
+    STORE_REG   REG_NAME(1), 0*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(2), 1*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(3), 2*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(4), 3*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(5), 4*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(6), 5*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(7), 6*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(8), 7*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(9), 8*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(10), 9*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(11), 10*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(12), 11*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(13), 12*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(14), 13*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(15), 14*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(16), 15*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(17), 16*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(18), 17*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(19), 18*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(20), 19*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(21), 20*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(22), 21*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(23), 22*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(24), 23*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(25), 24*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(26), 25*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(27), 26*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(28), 27*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(29), 28*REGLEN(REG_NAME(31))
+    STORE_REG   REG_NAME(30), 29*REGLEN(REG_NAME(31))
     
-    mv      sp, x31
-    csrrw   x31, sscratch, x31
-    STORE   x31, 30*REGLEN(sp)
+    #ifdef __CHERI_PURE_CAPABILITY__
+        cmove csp, c31
+        cspecialrw c31, sscratchc, c31
+        STORE_REG   REG_NAME(31), 30*REGLEN(RB(sp))
+    #else
+        mv      sp, x31
+        csrrw   x31, sscratch, x31
+        STORE(x31, 30*REGLEN, sp)
+    #endif
 
     csrr    t0, CSR_HSTATUS
-    STORE   t0, 31*REGLEN(sp)
+    STORE(t0, 31*REGLEN, sp)
     csrr    t0, sstatus
-    STORE   t0, 32*REGLEN(sp)
-    csrr    t0, sepc
-    STORE   t0, 33*REGLEN(sp)
+    STORE(t0, 32*REGLEN, sp)
+    #ifdef __CHERI__
+    cspecialr ct0, ddc
+    STORE_REG RB(t0), 33*REGLEN(RB(sp))
+    #endif
+    #ifdef __CHERI_PURE_CAPABILITY__
+        cspecialr ct0, sepcc
+    #else
+        csrr    t0, sepc
+    #endif
+    STORE_REG RB(t0), 34*REGLEN(RB(sp))
 
-    li      sp, BAO_CPU_BASE
-    li      t0, (CPU_STACK_OFF + CPU_STACK_SIZE)
-    add     sp, sp, t0
-
-    .option push
-    .option norelax
-    la  gp, __global_pointer$
-    .option pop   
+    #ifdef __CHERI_PURE_CAPABILITY__
+        clgc        ct1, hyp_root_data_cap
+        clc         ct1, 0(ct1)
+        li          sp, BAO_CPU_BASE
+        li          t0, CPU_STACK_OFF + CPU_STACK_SIZE
+        cfromptr    csp, ct1, sp
+        csetbounds  csp, csp, t0
+        cincoffset  csp, csp, t0
+        cmove cgp, cnull
+    #else
+        li      sp, BAO_CPU_BASE
+        li      t0, CPU_STACK_OFF + CPU_STACK_SIZE
+        add     sp, sp, t0
+        .option push
+        .option norelax
+        la  gp, __global_pointer$
+        .option pop  
+    #endif
 
 .endm
 
 
 
 .macro VM_ENTRY
-
+#ifdef __CHERI_PURE_CAPABILITY__
+    cspecialr c31, sscratchc
+#else
     csrr   x31, sscratch
+#endif
 
-    LOAD   x1, 31*REGLEN(x31)
-    csrw   CSR_HSTATUS, x1
-    LOAD   x1, 32*REGLEN(x31)
-    csrw   sstatus, x1
-    LOAD   x1, 33*REGLEN(x31)
+    LOAD(t0, 31*REGLEN, t6)
+    csrw   CSR_HSTATUS, t0
+    LOAD(t0, 32*REGLEN, t6)
+    csrw   sstatus, t0
+#ifdef __CHERI__
+    LOAD_REG   REG_NAME(1), 33*REGLEN(REG_NAME(31))
+    cspecialw ddc, c1
+#endif
+    LOAD_REG   REG_NAME(1), 34*REGLEN(REG_NAME(31))
+#ifdef __CHERI_PURE_CAPABILITY__
+    cspecialw sepcc, c1
+#else
     csrw   sepc, x1
+#endif
 
-    LOAD   x1, 0*REGLEN(x31)
-    LOAD   x2, 1*REGLEN(x31)
-    LOAD   x3, 2*REGLEN(x31)
-    LOAD   x4, 3*REGLEN(x31)
-    LOAD   x5, 4*REGLEN(x31)
-    LOAD   x6, 5*REGLEN(x31)
-    LOAD   x7, 6*REGLEN(x31)
-    LOAD   x8, 7*REGLEN(x31)
-    LOAD   x9, 8*REGLEN(x31)
-    LOAD   x10, 9*REGLEN(x31)
-    LOAD   x11, 10*REGLEN(x31)
-    LOAD   x12, 11*REGLEN(x31)
-    LOAD   x13, 12*REGLEN(x31)
-    LOAD   x14, 13*REGLEN(x31)
-    LOAD   x15, 14*REGLEN(x31)
-    LOAD   x16, 15*REGLEN(x31)
-    LOAD   x17, 16*REGLEN(x31)
-    LOAD   x18, 17*REGLEN(x31)
-    LOAD   x19, 18*REGLEN(x31)
-    LOAD   x20, 19*REGLEN(x31)
-    LOAD   x21, 20*REGLEN(x31)
-    LOAD   x22, 21*REGLEN(x31)
-    LOAD   x23, 22*REGLEN(x31)
-    LOAD   x24, 23*REGLEN(x31)
-    LOAD   x25, 24*REGLEN(x31)
-    LOAD   x26, 25*REGLEN(x31)
-    LOAD   x27, 26*REGLEN(x31)
-    LOAD   x28, 27*REGLEN(x31)
-    LOAD   x29, 28*REGLEN(x31)
-    LOAD   x30, 29*REGLEN(x31) 
-    LOAD   x31, 30*REGLEN(x31)  
+    LOAD_REG   REG_NAME(1), 0*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(2), 1*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(3), 2*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(4), 3*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(5), 4*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(6), 5*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(7), 6*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(8), 7*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(9), 8*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(10), 9*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(11), 10*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(12), 11*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(13), 12*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(14), 13*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(15), 14*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(16), 15*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(17), 16*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(18), 17*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(19), 18*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(20), 19*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(21), 20*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(22), 21*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(23), 22*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(24), 23*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(25), 24*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(26), 25*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(27), 26*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(28), 27*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(29), 28*REGLEN(REG_NAME(31))
+    LOAD_REG   REG_NAME(30), 29*REGLEN(REG_NAME(31)) 
+    LOAD_REG   REG_NAME(31), 30*REGLEN(REG_NAME(31))  
 
     sret
     j   .
@@ -121,10 +162,20 @@ _hyp_trap_vector:
     VM_EXIT
     csrr    t0, scause
     bltz    t0, 1f
-    call    sync_exception_handler
+    #ifdef __CHERI_PURE_CAPABILITY__
+        cllc   cra, sync_exception_handler
+        cjalr  cra
+    #else
+        call    sync_exception_handler
+    #endif
     j       2f
 1:
-    call    interrupts_arch_handle
+    #ifdef __CHERI_PURE_CAPABILITY__
+        cllc   cra, interrupts_arch_handle
+        cjalr  cra
+    #else
+        call    interrupts_arch_handle
+    #endif
 2:
 .global vcpu_arch_entry
 vcpu_arch_entry:

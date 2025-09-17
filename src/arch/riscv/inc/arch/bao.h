@@ -9,14 +9,37 @@
 #define RV64 (RV_XLEN == 64)
 #define RV32 (RV_XLEN == 32)
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#define OP(op) c##op
+#define RB(rb) c##rb
+#define REG_NAME(num) c##num
+#define CHERI_FACTOR 2
+#define LOAD_ADDR(rd, symbol) cllc c##rd, symbol
+#define STORE_REG csc
+#define LOAD_REG clc
+#else
+#define OP(op) op
+#define RB(rb) rb
+#define REG_NAME(num) x##num
+#define LOAD_ADDR(rd, symbol) la rd, symbol
+#define CHERI_FACTOR 1
+#define STORE_REG sd
+#define LOAD_REG ld
+#endif
+
+#define MEM_LOAD_OP(op, rd, off, rs) OP(op) rd, off(RB(rs))
+#define MEM_STORE_OP(op, rs2, off, rs1) OP(op) rs2, off(RB(rs1))
+#define REGLEN_BYTES (RV_XLEN / 8)
+#define REGLEN (REGLEN_BYTES * CHERI_FACTOR)
+
+
+
 #if (RV64)
-#define LOAD   ld
-#define STORE  sd
-#define REGLEN (8)
+#define LOAD(rd, off, rs1) MEM_LOAD_OP(ld, rd, off, rs1)
+#define STORE(rs2, off, rs1)  MEM_STORE_OP(sd, rs2, off, rs1)
 #elif (RV32)
-#define LOAD   lw
-#define STORE  sw
-#define REGLEN (4)
+#define LOAD(rd, off, rs1) MEM_LOAD_OP(lw, rd, off, rs1)
+#define STORE(rs2, off, rs1)  MEM_STORE_OP(sw, rs2, off, rs1)
 #endif
 
 #if (RV64)

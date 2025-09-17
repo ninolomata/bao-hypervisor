@@ -6,6 +6,11 @@
 #include <bao.h>
 #include <page_table.h>
 
+#ifdef __CHERI__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
+
 #if (RV32)
 struct page_table_dscr sv32_pt_dscr = {
     .lvls = 2,
@@ -41,15 +46,30 @@ struct page_table_dscr* vm_pt_dscr = &sv39x4_pt_dscr;
 pte_t* pt_get_pte(struct page_table* pt, size_t lvl, vaddr_t va)
 {
     size_t pte_index = pt_getpteindex_by_va(pt, va, 0);
-    pte_t* pte = &(pt->root[pte_index]);
+    #ifdef __CHERI_PURE_CAPABILITY__
+        ptraddr_t pte_pa = (paddr_t ) pt->root;
+        pte_t* pte = cheri_build_data_cap(pte_pa, PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+        pte = (pte_t*)__builtin_cheri_address_set((void *)pte, (ptraddr_t)&(pt->root[pte_index]));
+    #else
+        pte_t* pte = &(pt->root[pte_index]);
+    #endif
 
     for (size_t i = 0; i < lvl; i++) {
         if (!pte_valid(pte)) {
             return NULL;
         }
-        pte = (pte_t*)pte_addr(pte);
+        #ifdef __CHERI_PURE_CAPABILITY__
+            pte_pa = pte_addr(pte);
+        #else
+            pte = (pte_t*)pte_addr(pte);
+        #endif
         size_t index = pt_getpteindex_by_va(pt, va, i + 1);
-        pte = &pte[index];
+        #ifdef __CHERI_PURE_CAPABILITY__
+            pte = cheri_build_data_cap(pte_pa, PAGE_SIZE, CHERI_HYP_DEV_PERMS);
+            pte = (pte_t*)__builtin_cheri_address_set((void *)pte, (ptraddr_t)&pte[index]);
+        #else
+            pte = &pte[index];
+        #endif
     }
 
     return pte;

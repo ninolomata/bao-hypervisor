@@ -10,22 +10,47 @@
 #include <arch/csrs.h>
 #include <arch/instructions.h>
 
+#ifdef __CHERI__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
+
+#ifdef __CHERI__
+static void internal_exception_handler(void* gprs[])
+#else
 static void internal_exception_handler(unsigned long gprs[])
+#endif
 {
     for (int i = 0; i < 31; i++) {
-        console_printk("x%d:\t\t0x%0lx\n", i, gprs[i]);
+        console_printk("capability register c%d:", i);
+#ifdef __CHERI__
+        cheri_print_cap(gprs[i]);
+#else
+        console_printk("x%d:\t\t0x%lx\n", i, gprs[i]);
+#endif
     }
-    console_printk("sstatus:\t0x%0lx\n", csrs_sstatus_read());
-    console_printk("stval:\t\t0x%0lx\n", csrs_stval_read());
-    console_printk("sepc:\t\t0x%0lx\n", csrs_sepc_read());
+#ifdef __CHERI__
+    console_printk("sepcc:\n\r");
+    cheri_print_cap(scr_sepcc_read());
+    console_printk("stdc:\n\r");
+    cheri_print_cap(scr_stdc_read());
+#else
+    console_printk("sepc:\t\t0x%lx\n", csrs_sepc_read());
+#endif
+    console_printk("sstatus:\t0x%lx\n", csrs_sstatus_read());
+    console_printk("stval:\t\t0x%lx\n", csrs_stval_read());
     ERROR("cpu%d internal hypervisor abort - PANIC\n", cpu()->id);
 }
 
-static uint32_t read_ins(uintptr_t ins_addr)
+static uint32_t read_ins(void* ins_addr)
 {
     uint32_t ins = 0;
-
-    if (ins_addr & 0x1) {
+#ifdef __CHERI_PURE_CAPABILITY__
+    uintptr_t addr = __builtin_cheri_address_get(ins_addr);
+#else
+    uintptr_t addr = ins_addr;
+#endif
+    if (addr & 0x1) {
         ERROR("trying to read guest unaligned instruction");
     }
 
@@ -91,7 +116,11 @@ static size_t guest_page_fault_handler(void)
              * If htinst does not provide information about the trap, we must read the instruction
              * from the guest's memory manually.
              */
+#ifdef __CHERI_PURE_CAPABILITY__
+            void * ins_addr = scr_sepcc_read();
+#else
             vaddr_t ins_addr = csrs_sepc_read();
+#endif
             ins = read_ins(ins_addr);
             ins_size = INS_SIZE(ins);
         } else if (is_pseudo_ins((uint32_t)ins)) {
@@ -126,10 +155,37 @@ static size_t guest_page_fault_handler(void)
     }
 }
 
+static size_t cheri_exception_fault_handler(void)
+{
+    unsigned long stval = csrs_stval_read();
+    unsigned long cap_idx = (stval & CHERI_TVAL_CAP_IDX_MSK) >> CHERI_TVAL_CAP_IDX_OFF;
+    unsigned long cheri_cause = (stval & CHERI_TVAL_CAUSE_MSK);
+
+#ifdef __CHERI__
+    console_printk("sepcc:\n\r");
+    cheri_print_cap(scr_sepcc_read());
+    console_printk("stdc:\n\r");
+    cheri_print_cap(scr_stdc_read());
+#else
+    console_printk("sepc:\t\t0x%lx\n", csrs_sepc_read());
+#endif
+    console_printk("sstatus:\t0x%lx\n", csrs_sstatus_read());
+    console_printk("CHERI exception cause %s (%x)\n\r", cheri_trap_tval_to_str(cheri_cause), cheri_cause);
+    if ((cap_idx >> 0x5) & 0x1) {
+        console_printk("CHERI caused by privileged register %d \n\r", (cap_idx & (~(1 << 5))));
+    } else {
+        console_printk("CHERI caused by %x \n\r", cap_idx);
+    }
+    ERROR("cpu%d internal hypervisor abort - PANIC\n", cpu()->id);
+}
+
 sync_handler_t sync_handler_table[] = {
     [SCAUSE_CODE_ECV] = sbi_vs_handler,
     [SCAUSE_CODE_LGPF] = guest_page_fault_handler,
     [SCAUSE_CODE_SGPF] = guest_page_fault_handler,
+#ifdef __CHERI__
+    [SCAUSE_CODE_CF]   = cheri_exception_fault_handler,
+#endif
 };
 
 static const size_t sync_handler_table_size = sizeof(sync_handler_table) / sizeof(sync_handler_t);

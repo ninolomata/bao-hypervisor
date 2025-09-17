@@ -12,6 +12,11 @@
 #include <string.h>
 #include <shmem.h>
 
+#ifdef __CHERI__
+#include <arch/cheri_utils.h>
+#include <arch/cheri.h>
+#endif
+
 static struct vm_assignment {
     spinlock_t lock;
     bool master;
@@ -98,8 +103,15 @@ static bool vmm_alloc_vm(struct vm_allocation* vm_alloc, struct vm_config* vm_co
 
     vm_alloc->base = (vaddr_t)allocation;
     vm_alloc->size = total_size;
-    vm_alloc->vm = (struct vm*)vm_alloc->base;
-    vm_alloc->vcpus = (struct vcpu*)(vm_alloc->base + vcpus_offset);
+    #ifdef __CHERI_PURE_CAPABILITY__
+        vm_alloc->vm = cheri_build_data_cap((ptraddr_t)vm_alloc->base, total_size, CHERI_HYP_DATA_PERMS);
+        vm_alloc->vcpus = (struct vcpu*)cheri_build_data_cap((ptraddr_t)(vm_alloc->base + vcpus_offset),
+            total_size - vcpus_offset, CHERI_HYP_DATA_PERMS);
+
+    #else
+        vm_alloc->vm = (struct vm*)vm_alloc->base;
+        vm_alloc->vcpus = (struct vcpu*)(vm_alloc->base + vcpus_offset);
+    #endif
 
     return true;
 }

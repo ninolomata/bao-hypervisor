@@ -16,3 +16,7 @@ cpu-objs-y+=cache.o
 cpu-objs-y+=iommu.o
 cpu-objs-y+=relocate.o
 cpu-objs-y+=aclint.o
+ifeq ($(ARCH_SUB), riscv64xcheri)
+cpu-objs-y+=cheri_cap_relocs.o
+cpu-objs-y+=cheri_utils.o
+endif

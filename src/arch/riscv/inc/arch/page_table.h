@@ -33,16 +33,40 @@
 #define PTE_GLOBAL                (1ULL << 5)
 #define PTE_ACCESS                (1ULL << 6)
 #define PTE_DIRTY                 (1ULL << 7)
+#define PTE_CRG                   (1ULL << 59)
+#define PTE_CRM                   (1ULL << 60)
+#define PTE_CD                    (1ULL << 61)
+#define PTE_CR                    (1ULL << 62)
+#define PTE_CW                    (1ULL << 63)
 
+#ifdef __CHERI__
+#define PTE_RO                    (PTE_READ | PTE_CR)
+#define PTE_RW                    (PTE_READ | PTE_WRITE | PTE_CR | PTE_CW)
+#define PTE_XO                    (PTE_EXECUTE)
+#define PTE_RX                    (PTE_READ | PTE_EXECUTE | PTE_CR)
+#else
 #define PTE_RO                    (PTE_READ)
 #define PTE_RW                    (PTE_READ | PTE_WRITE)
 #define PTE_XO                    (PTE_EXECUTE)
 #define PTE_RX                    (PTE_READ | PTE_EXECUTE)
+#endif
+#ifdef __CHERI__
+#define PTE_RWX                   (PTE_CR | PTE_CW | PTE_READ | PTE_WRITE | PTE_EXECUTE)
+#else
 #define PTE_RWX                   (PTE_READ | PTE_WRITE | PTE_EXECUTE)
+#endif
 
 #define PTE_RSW_OFF               8
 #define PTE_RSW_LEN               2
 #define PTE_RSW_MSK               PTE_MASK(PTE_RSW_OFF, PTE_RSW_LEN)
+
+#ifdef __CHERI__
+#define PTE_CHERI_FLAGS_BITS_OFF  59
+#define PTE_CHERI_FLAGS_BITS_LEN  5
+#define PTE_CHERI_FLAGS_BITS_MSK  PTE_MASK(PTE_CHERI_FLAGS_BITS_OFF, PTE_CHERI_FLAGS_BITS_LEN)
+#else
+#define PTE_CHERI_FLAGS_BITS_MSK  0
+#endif
 
 #define PTE_TABLE                 (PTE_VALID)
 #define PTE_PAGE                  (PTE_RWX | PTE_VALID)
@@ -63,10 +87,18 @@
 #define PT_VM_REC_IND             (pt_nentries(&cpu()->as.pt, 0) - 2)
 
 #define PTE_INVALID               (0)
+#ifdef __CHERI__
+#define PTE_HYP_FLAGS             (PTE_GLOBAL | PTE_ACCESS | PTE_DIRTY | PTE_CD)
+#else
 #define PTE_HYP_FLAGS             (PTE_GLOBAL | PTE_ACCESS | PTE_DIRTY)
+#endif
 #define PTE_HYP_DEV_FLAGS         PTE_HYP_FLAGS
 
+#ifdef __CHERI__
+#define PTE_VM_FLAGS              (PTE_ACCESS | PTE_DIRTY | PTE_USER | PTE_CD)
+#else
 #define PTE_VM_FLAGS              (PTE_ACCESS | PTE_DIRTY | PTE_USER)
+#endif
 #define PTE_VM_DEV_FLAGS          PTE_VM_FLAGS
 
 #ifndef __ASSEMBLER__
@@ -89,7 +121,7 @@ struct page_table_arch {
 static inline void pte_set(pte_t* pte, paddr_t addr, pte_type_t type, pte_flags_t flags)
 {
     *pte = ((addr & PTE_ADDR_MSK) >> 2) |
-        (((type == PTE_TABLE) ? type : (type | flags)) & PTE_FLAGS_MSK);
+        (((type == PTE_TABLE) ? type : (type | flags)) & (PTE_FLAGS_MSK | PTE_CHERI_FLAGS_BITS_MSK));
 }
 
 static inline paddr_t pte_addr(pte_t* pte)

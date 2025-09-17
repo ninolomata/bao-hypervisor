@@ -6,6 +6,16 @@
 #ifndef ARCH_INSTRUCTIONS_H
 #define ARCH_INSTRUCTIONS_H
 
+#ifdef __CHERI_PURE_CAPABILITY__
+static inline uint64_t hlvxhu(void* addr)
+{
+    uint64_t value;
+    register void * ca3 __asm__("ca3") = addr;
+    __asm__ volatile(".insn r 0x73, 0x4, 0x32, %0, x13, x3\n\t" : "=r"(value) : "C"(ca3)
+                     : "memory");
+    return value;
+}
+#else
 static inline uint64_t hlvxhu(uintptr_t addr)
 {
     uint64_t value;
@@ -13,5 +23,6 @@ static inline uint64_t hlvxhu(uintptr_t addr)
                      : "memory");
     return value;
 }
+#endif
 
 #endif /* ARCH_INSTRUCTIONS_H */

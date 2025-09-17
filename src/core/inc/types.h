@@ -27,9 +27,18 @@ typedef unsigned long asid_t;
 typedef unsigned long vmid_t;
 #define INVALID_VMID ((vmid_t)~0UL)
 
+#ifdef __CHERI__
+typedef ptraddr_t addr_t;
+typedef ptraddr_t paddr_t;
+typedef void*     regaddr_t;
+typedef uintptr_t vaddr_t;
+#else
+typedef uintptr_t addr_t;
 typedef uintptr_t paddr_t;
 typedef uintptr_t regaddr_t;
 typedef uintptr_t vaddr_t;
+#endif
+
 #define MAX_VA     ((vaddr_t)~0UL)
 #define INVALID_VA MAX_VA
 

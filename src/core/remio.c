@@ -163,7 +163,7 @@ static bool remio_create_request(struct remio_device* device, struct emul_access
     request->bind_key = device->bind_key;
 
     if (acc->write) {
-        long unsigned int value = vcpu_readreg(cpu()->vcpu, acc->reg);
+        long unsigned int value = vcpu_readreg_raw(cpu()->vcpu, acc->reg);
         request->op = REMIO_HYP_WRITE;
         request->value = value;
     } else {
@@ -508,7 +508,7 @@ static bool remio_cpu_post_work(uint32_t event, uint8_t remio_bind_key, uint8_t 
 
     switch (event) {
         case REMIO_CPU_MSG_READ:
-            vcpu_writereg(cpu()->vcpu, request->reg, request->value);
+            vcpu_writereg_raw(cpu()->vcpu, request->reg, request->value);
             break;
         default:
             break;
