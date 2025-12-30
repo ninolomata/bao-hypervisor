@@ -51,6 +51,7 @@ DEBUG:=n
 OPTIMIZATIONS:=2
 CONFIG=
 PLATFORM=
+CHERI=1
 
 # Setup version
 
@@ -325,7 +326,7 @@ $(config_dep): $(config_src)
 
 $(config_def_generator): $(config_def_generator_src) $(config_src)
 	@echo "Compiling generator	$(patsubst $(cur_dir)/%, %, $@)"
-	@$(HOST_CC) $^ $(build_macros) $(HOST_CPPFLAGS) -DGENERATING_DEFS \
+	@$(HOST_CC) $^ $(build_macros) $(HOST_CPPFLAGS) -DGENERATING_DEFS -D$(ARCH) -DCHERI=0 \
 		$(addprefix -I, $(inc_dirs)) -o $@
 
 $(config_defs): $(config_def_generator)
@@ -334,7 +335,7 @@ $(config_defs): $(config_def_generator)
 
 $(platform_def_generator): $(platform_def_generator_src) $(platform_description)
 	@echo "Compiling generator	$(patsubst $(cur_dir)/%, %, $@)"
-	@$(HOST_CC) $^ $(build_macros) $(HOST_CPPFLAGS) -DGENERATING_DEFS -D$(ARCH) \
+	@$(HOST_CC) $^ $(build_macros) $(HOST_CPPFLAGS) -DGENERATING_DEFS -D$(ARCH) -DCHERI=0 \
 		$(addprefix -I, $(inc_dirs)) -o $@
 
 $(platform_defs): $(platform_def_generator)
