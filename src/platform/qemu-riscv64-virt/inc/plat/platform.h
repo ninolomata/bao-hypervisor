@@ -6,11 +6,11 @@
 #ifndef __PLAT_PLATFORM_H__
 #define __PLAT_PLATFORM_H__
 
+#include <plat/cpu_ext.h>
+
 #include <drivers/sbi_uart.h>
 
-#define CPU_EXT_SSTC 1
-
-#define IPIC_SBI     (1)
-#define IPIC_ACLINT  (2)
+#define IPIC_SBI    (1)
+#define IPIC_ACLINT (2)
 
 #endif
