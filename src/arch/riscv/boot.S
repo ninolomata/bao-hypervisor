@@ -148,6 +148,8 @@ _reset_handler:
 .pushsection .data
 _boot_lock:
     .4byte 0
+_master_ready:
+    .4byte 0
 .popsection
     la      t0, _boot_lock
     li      t1, 1
@@ -157,8 +159,23 @@ _boot_lock:
     sc.w    t2, t1, (t0)   
     bnez    t2, 1b 
     la      t0, CPU_MASTER
-    STORE      a0, 0(t0)
+    STORE   a0, 0(t0)
+    fence   rw, w
+    la      t0, _master_ready
+    li      t1, 1
+    sw      t1, 0(t0)
+    j       4f
 2:
+    /* Losers wait until CPU_MASTER is valid */
+    la      t0, _master_ready
+    li      t1, 1
+
+3:
+    lw    t2, 0(t0)
+    blt     t2, t1, 3b
+    fence   r, rw
+
+4:
 #endif
 
     /* Setup bootstrap page tables. Assuming sv39 or sv32 support. */ 
